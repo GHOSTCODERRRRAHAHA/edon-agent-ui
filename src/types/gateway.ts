@@ -60,6 +60,24 @@ export interface IntegrationsStatusResponse {
   clawdbot: ClawdbotIntegrationStatus
 }
 
+export interface PolicyPackSummary {
+  name: string
+  description: string
+  risk_level: string
+  scope_summary: Record<string, number>
+  constraints_summary: {
+    allowed_tools: number
+    blocked_tools: number
+    confirm_required: boolean
+  }
+}
+
+export interface PolicyPacksResponse {
+  packs: PolicyPackSummary[]
+  default: string
+  active_preset?: { preset_name?: string; applied_at?: string }
+}
+
 export interface AgentIntegration {
   agent_id: string
   name?: string

@@ -1,11 +1,12 @@
-import { useState } from 'react'
-import { apiPost } from '../lib/api'
+import { useState, useEffect } from 'react'
+import { apiGet, apiPost } from '../lib/api'
 import { getIntentId, setIntentId } from '../lib/storage'
 import type {
   ClawdbotConnectBody,
   ClawdbotConnectResponse,
   ApplyPolicyResponse,
   ClawdbotInvokeResponse,
+  PolicyPacksResponse,
 } from '../types/gateway'
 
 type Step = 'connect' | 'apply' | 'invoke'
@@ -21,6 +22,50 @@ export default function OnboardingWizard() {
   const [invokeResult, setInvokeResult] = useState<ClawdbotInvokeResponse | null>(null)
   const [invokeError, setInvokeError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [policyPacks, setPolicyPacks] = useState<PolicyPacksResponse | null>(null)
+  const [selectedPack, setSelectedPack] = useState('casual_user')
+  const [policyError, setPolicyError] = useState<string | null>(null)
+  const [autoApplied, setAutoApplied] = useState(false)
+
+  useEffect(() => {
+    let active = true
+    const loadPacks = async () => {
+      const result = await apiGet<PolicyPacksResponse>('/policy-packs')
+      if (!active) return
+      if ('error' in result) {
+        setPolicyError(result.error.kind === 'unauthorized' ? 'Unauthorized — paste token in Settings' : result.error.message)
+        return
+      }
+      setPolicyPacks(result.data)
+      setPolicyError(null)
+      if (result.data.default) {
+        setSelectedPack(result.data.default)
+      }
+    }
+    loadPacks()
+    return () => {
+      active = false
+    }
+  }, [])
+
+  const applyPolicy = async (packName?: string, isAuto?: boolean) => {
+    setApplyResult(null)
+    setLoading(true)
+    const pack = packName || selectedPack || 'casual_user'
+    const result = await apiPost<ApplyPolicyResponse>(`/policy-packs/${pack}/apply`, {})
+    setLoading(false)
+    if ('error' in result) {
+      setApplyResult({ ok: false, message: result.error.kind === 'unauthorized' ? 'Unauthorized — paste token in Settings' : result.error.kind === 'offline' ? 'Gateway unreachable' : result.error.message })
+      return false
+    }
+    const id = result.data.intent_id
+    setIntentId(id)
+    setIntentIdState(id)
+    setApplyResult({ ok: true, intentId: id, message: isAuto ? 'Default policy applied.' : 'Policy applied.' })
+    setStep('invoke')
+    if (isAuto) setAutoApplied(true)
+    return true
+  }
 
   const handleConnect = async () => {
     setConnectResult(null)
@@ -37,23 +82,16 @@ export default function OnboardingWizard() {
       return
     }
     setConnectResult({ ok: true, message: result.data.message || 'Connected.' })
+    const existingIntentId = getIntentId()
+    if (!existingIntentId) {
+      await applyPolicy('casual_user', true)
+      return
+    }
     setStep('apply')
   }
 
   const handleApply = async () => {
-    setApplyResult(null)
-    setLoading(true)
-    const result = await apiPost<ApplyPolicyResponse>('/policy-packs/clawdbot_safe/apply', {})
-    setLoading(false)
-    if ('error' in result) {
-      setApplyResult({ ok: false, message: result.error.kind === 'unauthorized' ? 'Unauthorized — paste token in Settings' : result.error.kind === 'offline' ? 'Gateway unreachable' : result.error.message })
-      return
-    }
-    const id = result.data.intent_id
-    setIntentId(id)
-    setIntentIdState(id)
-    setApplyResult({ ok: true, intentId: id, message: 'Policy applied.' })
-    setStep('invoke')
+    await applyPolicy()
   }
 
   const handleInvoke = async () => {
@@ -84,6 +122,11 @@ export default function OnboardingWizard() {
     <div style={{ padding: 24, maxWidth: 640 }}>
       <h1 style={{ marginTop: 0 }}>Onboarding</h1>
       <p style={{ color: '#9ca3af', marginBottom: 24 }}>Connect Clawdbot → Apply policy → Test invoke</p>
+      {autoApplied && (
+        <p style={{ marginBottom: 24, color: '#22c55e', fontSize: 14 }}>
+          Default policy applied automatically on first connection.
+        </p>
+      )}
 
       {/* Step A: Connect Clawdbot */}
       <section style={{ marginBottom: 32, padding: 16, background: '#1a1a1e', borderRadius: 8 }}>
@@ -119,8 +162,32 @@ export default function OnboardingWizard() {
       {/* Step B: Apply policy pack */}
       <section style={{ marginBottom: 32, padding: 16, background: '#1a1a1e', borderRadius: 8 }}>
         <h2 style={{ fontSize: 16, marginTop: 0 }}>Step B: Apply policy pack</h2>
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: 'block', marginBottom: 4, fontSize: 14 }}>Preset</label>
+          <select
+            value={selectedPack}
+            onChange={(e) => setSelectedPack(e.target.value)}
+            style={{ width: '100%', padding: 8, background: '#0f0f12', border: '1px solid #333', borderRadius: 4, color: '#e4e4e7' }}
+          >
+            {(policyPacks?.packs ?? []).length === 0 && (
+              <option value={selectedPack}>{selectedPack}</option>
+            )}
+            {(policyPacks?.packs ?? []).map((pack) => (
+              <option key={pack.name} value={pack.name}>
+                {pack.name} {policyPacks?.default === pack.name ? '(default)' : ''}
+              </option>
+            ))}
+          </select>
+          {policyError && <p style={{ marginTop: 8, color: '#ef4444', fontSize: 13 }}>{policyError}</p>}
+          {!policyPacks && !policyError && <p style={{ marginTop: 8, color: '#9ca3af', fontSize: 13 }}>Loading presets…</p>}
+          {policyPacks?.packs && (
+            <p style={{ marginTop: 8, color: '#9ca3af', fontSize: 13 }}>
+              {policyPacks.packs.find((p) => p.name === selectedPack)?.description || 'Select a preset that matches your workflow.'}
+            </p>
+          )}
+        </div>
         <button type="button" onClick={handleApply} disabled={loading} style={{ padding: '8px 16px', background: '#2563eb', border: 'none', borderRadius: 6, color: '#fff', cursor: loading ? 'not-allowed' : 'pointer' }}>
-          {loading ? 'Applying…' : 'Apply clawdbot_safe'}
+          {loading ? 'Applying…' : `Apply ${selectedPack}`}
         </button>
         {applyResult && (
           <div style={{ marginTop: 12, fontSize: 14 }}>

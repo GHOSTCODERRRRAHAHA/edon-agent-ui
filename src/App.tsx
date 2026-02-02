@@ -7,6 +7,7 @@ import IntegrationsPage from './pages/IntegrationsPage'
 import OnboardingWizard from './pages/OnboardingWizard'
 import AgentsPage from './pages/AgentsPage'
 import SupportPage from './pages/SupportPage'
+import QuickstartPage from './pages/QuickstartPage'
 
 export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -22,6 +23,7 @@ export default function App() {
         <nav style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
           <Link to="/" style={{ color: '#e4e4e7', textDecoration: 'none', fontWeight: 600 }}>EDON Agent UI</Link>
           <Link to="/status" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: 14 }}>Status</Link>
+          <Link to="/quickstart" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: 14 }}>Quickstart</Link>
           <Link to="/integrations" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: 14 }}>Integrations</Link>
           <Link to="/agents" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: 14 }}>Agents</Link>
           <Link to="/support" style={{ color: '#9ca3af', textDecoration: 'none', fontSize: 14 }}>Support</Link>
@@ -36,6 +38,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<StatusPage />} />
           <Route path="/status" element={<StatusPage />} />
+          <Route path="/quickstart" element={<QuickstartPage />} />
           <Route path="/integrations" element={<IntegrationsPage />} />
           <Route path="/agents" element={<AgentsPage />} />
           <Route path="/support" element={<SupportPage />} />
