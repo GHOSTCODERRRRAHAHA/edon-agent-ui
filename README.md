@@ -29,6 +29,19 @@ Open http://localhost:5173. Paste your gateway token in **Settings** (same value
 - **Settings** (gear or “Settings” in the top bar): Gateway URL and **Token** (masked). Token is stored in `localStorage` only; never in env or code.
 - Use the same value as `EDON_API_TOKEN` in the gateway’s `.env`.
 
+## Production
+
+**Console URL:** https://agent.edoncore.com
+
+### Deploy (Render recommended)
+
+Use the deployment guide in `DEPLOY_AND_TEST.md` for exact steps, including
+custom domain and SPA rewrite rules.
+
+- **Build command:** `npm ci && npm run build`
+- **Publish directory:** `dist`
+- **Env vars:** `VITE_EDON_GATEWAY_URL=https://edon-gateway.onrender.com`
+
 ## Troubleshooting
 
 - **401 Unauthorized** — Token missing or wrong. Paste the same token set in the gateway as `EDON_API_TOKEN`; save in Settings.

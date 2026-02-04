@@ -1,0 +1,20 @@
+# Render Blueprint: EDON Agent UI (static site)
+# NOTE: Render requires render.yaml at repo root. If this folder is a standalone
+# repo, keep it here. If this is part of the monorepo, create the static site
+# manually and set the Root directory to "edon-agent-ui".
+
+services:
+  - type: web
+    name: edon-agent-ui
+    runtime: static
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_EDON_GATEWAY_URL
+        value: https://edon-gateway.onrender.com
+      - key: VITE_EDON_MOCK_MODE
+        value: "false"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
