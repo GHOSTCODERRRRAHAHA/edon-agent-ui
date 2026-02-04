@@ -9,15 +9,11 @@ import type {
   PolicyPacksResponse,
 } from '../types/gateway'
 
-type Step = 'connect' | 'apply' | 'invoke'
-
 export default function OnboardingWizard() {
-  const [step, setStep] = useState<Step>('connect')
   const [baseUrl, setBaseUrl] = useState('http://127.0.0.1:18789')
   const [authMode] = useState<'password' | 'token'>('password')
   const [secret, setSecret] = useState('')
   const [connectResult, setConnectResult] = useState<{ ok: boolean; message: string } | null>(null)
-  const [intentId, setIntentIdState] = useState(getIntentId())
   const [applyResult, setApplyResult] = useState<{ ok: boolean; intentId?: string; message: string } | null>(null)
   const [invokeResult, setInvokeResult] = useState<ClawdbotInvokeResponse | null>(null)
   const [invokeError, setInvokeError] = useState<string | null>(null)
@@ -60,9 +56,7 @@ export default function OnboardingWizard() {
     }
     const id = result.data.intent_id
     setIntentId(id)
-    setIntentIdState(id)
     setApplyResult({ ok: true, intentId: id, message: isAuto ? 'Default policy applied.' : 'Policy applied.' })
-    setStep('invoke')
     if (isAuto) setAutoApplied(true)
     return true
   }
@@ -87,7 +81,6 @@ export default function OnboardingWizard() {
       await applyPolicy('casual_user', true)
       return
     }
-    setStep('apply')
   }
 
   const handleApply = async () => {
